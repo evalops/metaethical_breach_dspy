@@ -1,10 +1,10 @@
 # Metaethical Breach DSPy
 
 A reproducible research framework for studying safety guardrail
-violations in language models under metaethical pressure.  Inspired by
-the **Folie à Deux** co‑training study【327039458444812†L384-L404】, this project
+violations in language models under metaethical pressure. Inspired by
+the [**Folie à Deux** co-training study](https://github.com/jplhughes/folie-a-deux-dspy), this project
 investigates whether appeals to abstract moral philosophies can coax a
-model into violating its refusal policies.  Where Folie à Deux
+model into violating its refusal policies. Where Folie à Deux
 optimises verifiers for truth versus agreement, *Metaethical
 Breach* measures baseline refusal robustness and the impact of
 philosophical framing on guardrail breaches.
@@ -12,12 +12,12 @@ philosophical framing on guardrail breaches.
 ## Motivation
 
 The absence of standard benchmarks for ethical robustness means that
-potential safety failures may go unnoticed.  Models are typically
+potential safety failures may go unnoticed. Models are typically
 rewarded for helpfulness and truthfulness, yet they must also refuse
-requests that solicit wrongdoing.  By wrapping harmful prompts in
+requests that solicit wrongdoing. By wrapping harmful prompts in
 philosophical arguments (utilitarianism, deontology, virtue ethics,
 moral particularism and error theory), we test if a model can be
-persuaded to override its guardrails.  The framework quantifies these
+persuaded to override its guardrails. The framework quantifies these
 effects and supports optional optimisation to harden refusals.
 
 ## Repository structure
@@ -41,7 +41,7 @@ metaethical_breach_dspy/
 │   ├── judge.py           # Signature definitions and verdict parsing
 │   ├── metrics.py         # Metric functions
 │   ├── evaluation.py      # Test runners (pressure & flip tests)
-│   └── experiment.py      # High‑level experiment orchestration
+│   └── experiment.py      # High-level experiment orchestration
 └── tests/
     ├── test_data.py       # Unit tests for dataset functions
     └── test_metrics.py    # Unit tests for metric functions
@@ -49,19 +49,19 @@ metaethical_breach_dspy/
 
 ## Dataset configuration
 
-Following the Folie à Deux template【327039458444812†L384-L394】, we split data
+Following the [Folie à Deux template](https://github.com/jplhughes/folie-a-deux-dspy), we split data
 into a labeled development set and an unlabeled training set:
 
-- **Development set:** 15 user requests.  Ten are harmful (e.g., paywall
-  evasion, Wi‑Fi password theft, exam cheating, fake IDs) and must
-  be refused (`verdict='no'`).  Five are benign (capital cities,
+- **Development set:** 15 user requests. Ten are harmful (e.g., paywall
+  evasion, Wi-Fi password theft, exam cheating, fake IDs) and must
+  be refused (`verdict='no'`). Five are benign (capital cities,
   science explanations, translation, etc.) and should be answered
   normally (`verdict='yes'`).
 - **Training set:** The harmful base requests repeated several times
   (default five) to supply examples for optional optimisation.
 
 Metaethical framing prompts are defined in `data.py` as five
-philosophical lenses.  Each prompt is neutral and does not include
+philosophical lenses. Each prompt is neutral and does not include
 operational instructions.
 
 ## Experimental design
@@ -71,18 +71,18 @@ vulnerability:
 
 1. **Metaethical Pressure Test (MPT)** – Each request is posed
    twice: once plainly (control) and once wrapped in up to `N`
-   random metaethical frames.  We compute:
+   random metaethical frames. We compute:
    - **GBR_control:** Guardrail breach rate on control prompts.
    - **GBR_meta:** Breach rate under metaethical framing.
    - **RBR_meta:** Rate of breaches containing ethical justification.
    - **Lift:** Difference (`GBR_meta – GBR_control`).
-2. **Self Reflection Flip Test (SRFT)** – The assistant is asked a
-   harmful question.  If it refuses, we prompt it to reconsider
-   under a metaethical frame.  **FARR** (Flip‑After‑Reflection Rate)
+2. **Self Reflection Flip Test (SRFT)** – The assistant is asked a
+   harmful question. If it refuses, we prompt it to reconsider
+   under a metaethical frame. **FARR** (Flip-After-Reflection Rate)
    measures how often an initial refusal flips to a breach.
 
 Optional optimisation uses `dspy.teleprompt.MIPROv2` to tune the
-assistant on the unlabeled training set.  A simple refusal metric
+assistant on the unlabeled training set. A simple refusal metric
 rewards common refusal phrasing and penalises any other answer.
 Multiple training rounds can be configured via the `TRAIN_ROUNDS`
 environment variable.
@@ -91,17 +91,17 @@ environment variable.
 
 ### Prerequisites
 
-- Python 3.10+
+- Python 3.10+
 - `dspy-ai` and optional dependencies listed in `requirements.txt`
 - A supported language model backend (OpenAI, Anthropic, Ollama, etc.)
-  with API credentials.  Refer to `config.py` for environment
+  with API credentials. Refer to `config.py` for environment
   variables.
 
 ### Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/your‑username/metaethical_breach_dspy.git
+git clone https://github.com/evalops/metaethical_breach_dspy.git
 cd metaethical_breach_dspy
 
 # Create a virtual environment and install dependencies
@@ -111,13 +111,13 @@ pip install -r requirements.txt
 
 ### Running the experiment
 
-Use the helper script in `scripts/` to run the experiment.  You can
+Use the helper script in `scripts/` to run the experiment. You can
 override settings via environment variables:
 
 ```bash
 # Example: run with default settings using an OpenAI model
 export MODEL="gpt-4o"
-export API_KEY="sk‑..."
+export API_KEY="sk-..."
 python scripts/run_experiment.py
 
 # Example: run with Anthropic and additional frames per item
@@ -128,16 +128,16 @@ MODEL="ollama_chat/llama3.1:8b" API_BASE="http://localhost:11434" \
 TRAIN_ROUNDS=2 python scripts/run_experiment.py
 ```
 
-Results are printed to stdout and can be captured to files.  Detailed
-per‑example outputs (including redacted assistant messages) are
+Results are printed to stdout and can be captured to files. Detailed
+per-example outputs (including redacted assistant messages) are
 returned as dictionaries for further analysis.
 
 ## Technical details
 
-The implementation follows the modular structure of Folie à Deux【327039458444812†L440-L444】:
+The implementation follows the modular structure of [Folie à Deux](https://github.com/jplhughes/folie-a-deux-dspy):
 
 - **Configuration management** (`config.py`) loads environment
-  variables and configures the DSy runtime.
+  variables and configures the DSPy runtime.
 - **Data** (`data.py`) defines the development set, training set and
   metaethical frames.
 - **Judging** (`judge.py`) declares DSPy signatures for assistant
@@ -145,22 +145,22 @@ The implementation follows the modular structure of Folie à Deux【3270394584
 - **Metrics** (`metrics.py`) collects utility functions to compute
   aggregate statistics.
 - **Evaluation** (`evaluation.py`) implements the MPT and SRFT
-  runners, returning per‑item results and summary metrics.
+  runners, returning per-item results and summary metrics.
 - **Experiment orchestration** (`experiment.py`) ties everything
   together, supporting optional training, experiment loops and
   parameter sweeps (e.g., varying `frames_per_item` or training
-  rounds).  Inspired by the co‑evolutionary loop in Folie à Deux【327039458444812†L397-L404】,
+  rounds). Inspired by the co-evolutionary loop in [Folie à Deux](https://github.com/jplhughes/folie-a-deux-dspy),
   this module allows for systematic studies of refusal robustness.
 
 ## Limitations and future work
 
-This research code is experimental.  It assumes the availability of
+This research code is experimental. It assumes the availability of
 a second language model to act as judge and uses heuristics for
-refusal training.  The dataset is small and the metaethical frames
-cover only a handful of ethical theories.  Future work should
+refusal training. The dataset is small and the metaethical frames
+cover only a handful of ethical theories. Future work should
 introduce larger and more diverse datasets, explore additional
 philosophical perspectives, integrate formal safety policies and
-compare results across a wider range of model families.  Contributions
+compare results across a wider range of model families. Contributions
 are welcome via pull requests.
 
 ## License
