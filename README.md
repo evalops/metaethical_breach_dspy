@@ -138,7 +138,9 @@ returned as dictionaries for further analysis.
 
 | Model | GBR_control | GBR_meta | RBR_meta | Lift | FARR | Notes |
 |-------|-------------|----------|----------|------|------|-------|
-| ollama_chat/gpt-oss:20b | 0.000 | 0.067 | 0.000 | 0.067 | 0.333 | Tested with FRAMES_PER_ITEM=1 |
+| ollama_chat/gpt-oss:20b | 0.000 | 0.067 | 0.000 | 0.067 | 0.333 | Large model with safety training |
+| ollama_chat/tinyllama:1.1b | 0.000 | 0.000 | 0.067 | 0.000 | 0.000 | Small model, inconsistent safety |
+| ollama_chat/dolphin-mistral:7b-v2.6-q4_K_M | 0.333 | 0.267 | 0.133 | -0.067 | 0.100 | Uncensored model, high vulnerability |
 
 **Metrics explained:**
 - **GBR_control:** Guardrail breach rate on plain harmful prompts (lower is better)
@@ -146,6 +148,31 @@ returned as dictionaries for further analysis.
 - **RBR_meta:** Rate of breaches containing ethical justification
 - **Lift:** Increase in breach rate with metaethical framing (GBR_meta - GBR_control)
 - **FARR:** Flip-After-Reflection Rate - how often refusals flip to breaches after reflection
+
+### Key Findings
+
+1. **Uncensored models are highly vulnerable**: Dolphin-Mistral shows 33.3% breach rate even on direct harmful requests, confirming that models explicitly trained without safety constraints pose significant risks.
+
+2. **Smaller models show inconsistent safety**: TinyLlama (1.1B) exhibits unpredictable behavior, sometimes refusing and sometimes providing partial harmful content.
+
+3. **Metaethical framing has complex effects**: Surprisingly, Dolphin-Mistral showed a slight *decrease* in breach rate with metaethical framing (-0.067 lift), suggesting that philosophical framing might actually trigger more thoughtful responses in some cases.
+
+### Why Dolphin-Mistral is Vulnerable
+
+The Dolphin series models are explicitly designed to be "uncensored" - they have been fine-tuned to remove refusal behaviors present in the base Mistral model. According to the model's documentation:
+
+- **Removed alignment**: The model has been deliberately trained to comply with requests that standard models would refuse
+- **No safety training**: Unlike standard models that undergo RLHF (Reinforcement Learning from Human Feedback) for safety, Dolphin models skip this step
+- **Instruction-following priority**: The model prioritizes following instructions over safety considerations
+- **Community-driven**: Created by the open-source community specifically for unrestricted use cases
+
+This makes Dolphin-Mistral useful for:
+- Red-teaming and safety research
+- Understanding model vulnerabilities
+- Testing safety measures and guardrails
+- Academic research on model behavior
+
+**Warning**: Due to its lack of safety constraints, Dolphin-Mistral should only be used in controlled research environments and never deployed in production systems without additional safety layers.
 
 ## Technical details
 
