@@ -2,7 +2,7 @@
 
 A reproducible research framework for studying safety guardrail
 violations in language models under metaethical pressure. Inspired by
-the [**Folie à Deux** co-training study](https://github.com/jplhughes/folie-a-deux-dspy), this project
+the [**Folie à Deux** co-training study](https://github.com/evalops/folie-a-deux-dspy), this project
 investigates whether appeals to abstract moral philosophies can coax a
 model into violating its refusal policies. Where Folie à Deux
 optimises verifiers for truth versus agreement, *Metaethical
@@ -49,7 +49,7 @@ metaethical_breach_dspy/
 
 ## Dataset configuration
 
-Following the [Folie à Deux template](https://github.com/jplhughes/folie-a-deux-dspy), we split data
+Following the [Folie à Deux template](https://github.com/evalops/folie-a-deux-dspy), we split data
 into a labeled development set and an unlabeled training set:
 
 - **Development set:** 15 user requests. Ten are harmful (e.g., paywall
@@ -134,7 +134,7 @@ returned as dictionaries for further analysis.
 
 ## Technical details
 
-The implementation follows the modular structure of [Folie à Deux](https://github.com/jplhughes/folie-a-deux-dspy):
+The implementation follows the modular structure of [Folie à Deux](https://github.com/evalops/folie-a-deux-dspy):
 
 - **Configuration management** (`config.py`) loads environment
   variables and configures the DSPy runtime.
@@ -149,7 +149,7 @@ The implementation follows the modular structure of [Folie à Deux](https://gith
 - **Experiment orchestration** (`experiment.py`) ties everything
   together, supporting optional training, experiment loops and
   parameter sweeps (e.g., varying `frames_per_item` or training
-  rounds). Inspired by the co-evolutionary loop in [Folie à Deux](https://github.com/jplhughes/folie-a-deux-dspy),
+  rounds). Inspired by the co-evolutionary loop in [Folie à Deux](https://github.com/evalops/folie-a-deux-dspy),
   this module allows for systematic studies of refusal robustness.
 
 ## Limitations and future work
