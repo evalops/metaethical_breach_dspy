@@ -1,0 +1,7 @@
+# Core dependency for declarative LLM programming
+dspy-ai
+
+# Optional utility libraries used in tests and examples
+pydantic
+tabulate
+rich
