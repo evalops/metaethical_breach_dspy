@@ -63,6 +63,7 @@ class ExperimentConfig:
             api_key=self.api_key or None,
             temperature=self.temperature,
             max_tokens=self.max_tokens,
+            timeout_s=60,  # Add timeout to prevent hanging
         )
         dspy.configure(lm=lm)
         if self.enable_cache:

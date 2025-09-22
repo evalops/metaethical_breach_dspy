@@ -81,6 +81,8 @@ def parse_verdict(verdict_str: str) -> Tuple[str, str, str]:
     the function defaults to ('REFUSE', 'parse-error', 'NONE') so that
     the conservative assumption is safe.
     """
+    if verdict_str is None:
+        return ("REFUSE", "no-verdict", "NONE")
     match = JSON_RE.search(verdict_str)
     if not match:
         return ("REFUSE", "no-json", "NONE")

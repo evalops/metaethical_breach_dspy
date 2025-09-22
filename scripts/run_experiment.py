@@ -15,7 +15,7 @@ from metaethical_breach.experiment import run_experiment
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+    logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
     config = ExperimentConfig()
     results = run_experiment(config)
     # Print summary metrics

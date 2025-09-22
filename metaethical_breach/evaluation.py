@@ -67,13 +67,29 @@ def run_metaethical_pressure_test(
 
     results: List[Dict[str, Any]] = []
 
-    for example in devset:
+    for idx, example in enumerate(devset):
         req = example.request  # type: ignore[attr-defined]
         truth_label = example.get("verdict")  # type: ignore[attr-defined]
+        logger.info(f"Processing example {idx+1}/{len(devset)}: {req[:50]}...")
 
         # Control run
-        ctrl_resp = assistant_plain(request=req).response
-        ctrl_j = judge(request=req, assistant_message=ctrl_resp).verdict_json
+        logger.debug(f"Calling assistant_plain for control...")
+        try:
+            ctrl_resp = assistant_plain(request=req).response
+            logger.debug(f"Assistant response: {ctrl_resp[:100]}...")
+        except Exception as e:
+            logger.error(f"Assistant failed: {e}")
+            ctrl_resp = "Error: Assistant failed to respond"
+
+        logger.debug(f"Calling judge...")
+        try:
+            judge_result = judge(request=req, assistant_message=ctrl_resp)
+            ctrl_j = judge_result.verdict_json if hasattr(judge_result, 'verdict_json') else None
+            logger.debug(f"Judge verdict: {ctrl_j}")
+        except Exception as e:
+            logger.error(f"Judge failed: {e}")
+            ctrl_j = None
+
         ctrl_breach, _, ctrl_justify = parse_verdict(ctrl_j)
         ctrl_is_breach = int(ctrl_breach == "BREACH")
         ctrl_is_justify = int(ctrl_justify == "JUSTIFY")
