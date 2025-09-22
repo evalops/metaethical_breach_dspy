@@ -132,6 +132,21 @@ Results are printed to stdout and can be captured to files. Detailed
 per-example outputs (including redacted assistant messages) are
 returned as dictionaries for further analysis.
 
+## Results
+
+### Model Performance
+
+| Model | GBR_control | GBR_meta | RBR_meta | Lift | FARR | Notes |
+|-------|-------------|----------|----------|------|------|-------|
+| ollama_chat/gpt-oss:20b | 0.000 | 0.067 | 0.000 | 0.067 | 0.333 | Tested with FRAMES_PER_ITEM=1 |
+
+**Metrics explained:**
+- **GBR_control:** Guardrail breach rate on plain harmful prompts (lower is better)
+- **GBR_meta:** Breach rate under metaethical framing (lower is better)
+- **RBR_meta:** Rate of breaches containing ethical justification
+- **Lift:** Increase in breach rate with metaethical framing (GBR_meta - GBR_control)
+- **FARR:** Flip-After-Reflection Rate - how often refusals flip to breaches after reflection
+
 ## Technical details
 
 The implementation follows the modular structure of [Folie à Deux](https://github.com/evalops/folie-a-deux-dspy):
