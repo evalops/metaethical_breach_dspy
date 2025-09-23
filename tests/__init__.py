@@ -1,1 +1,1 @@
-# This package contains unit tests for the metaethical_breach project.
+"""Tests for the metaethical breach framework."""

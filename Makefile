@@ -1,27 +1,40 @@
-PYTHON ?= python
+.PHONY: help install test clean run experiment
 
-setup:
-	@echo "Setting up virtual environment and installing dependencies..."
-	$(PYTHON) -m venv .venv && \
-	. .venv/bin/activate && \
-	pip install -r requirements.txt
+help:
+	@echo "Metaethical Breach DSPy - AI Safety Research Framework"
+	@echo ""
+	@echo "Available commands:"
+	@echo "  install     Install dependencies"
+	@echo "  test        Run tests"
+	@echo "  clean       Clean temporary files"
+	@echo "  experiment  Run the metaethical pressure test"
+	@echo "  help        Show this help message"
 
-run:
-	@echo "Running experiment with default settings..."
-	$(PYTHON) scripts/run_experiment.py
+install:
+	python -m pip install -r requirements.txt
 
-run-training:
-	@echo "Running experiment with two training rounds..."
-	TRAIN_ROUNDS=2 $(PYTHON) scripts/run_experiment.py
+test:
+	python -m pytest tests/ -v
 
-run-sweep:
-	@echo "Running parameter sweep over frames_per_item values..."
-	for n in 1 3 5; do \
-		FRAMES_PER_ITEM=$$n $(PYTHON) scripts/run_experiment.py; \
-	done
+clean:
+	find . -type f -name "*.pyc" -delete
+	find . -type d -name "__pycache__" -delete
+	find . -type d -name "*.egg-info" -exec rm -rf {} +
+	rm -rf build/ dist/ .pytest_cache/
 
-fmt:
-	@echo "Formatting code with ruff..."
-	ruff format metaethical_breach
+experiment:
+	@echo "Running metaethical pressure test..."
+	@echo "Make sure to set MODEL and API_BASE environment variables"
+	python scripts/run_experiment.py
 
-.PHONY: setup run run-training run-sweep fmt
+# Development targets
+dev-install: install
+	python -m pip install pytest black isort
+
+format:
+	black metaethical_breach/ scripts/ tests/
+	isort metaethical_breach/ scripts/ tests/
+
+lint:
+	black --check metaethical_breach/ scripts/ tests/
+	isort --check-only metaethical_breach/ scripts/ tests/
