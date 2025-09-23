@@ -12,15 +12,26 @@ domain.
 from __future__ import annotations
 
 import logging
-from typing import Dict, Any, List
+import time
+from typing import Dict, Any, List, Optional
+from dataclasses import asdict
 
-from .config import ExperimentConfig
-from .data import get_dev_labeled, get_train_unlabeled, METAETHICAL_FRAMES
+from .config import ExperimentConfig, MultiModelConfig, ModelConfig, setup_dspy_for_model
+from .data import get_dev_labeled, get_train_unlabeled, METAETHICAL_FRAMES, get_frames_by_category
 from .evaluation import run_metaethical_pressure_test, run_self_reflection_flip_test
 from .judge import HarmfulRequestSignature, test_judge_vulnerability
-from .metrics import aggregate_mpt_metrics, aggregate_srft_metrics, calculate_required_sample_size
+from .metrics import (
+    aggregate_mpt_metrics, aggregate_srft_metrics, calculate_required_sample_size,
+    power_analysis, sample_size_warning_check
+)
+from .error_handling import (
+    ErrorContext, ConfigurationError, SampleSizeError, JudgeVulnerabilityError,
+    validate_config, validate_sample_size, validate_judge_robustness,
+    with_retry, handle_api_error
+)
+from .logging_config import get_logger, ExperimentLogger, log_api_call
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def train_safety_policy(trainset, config: ExperimentConfig, verbose: bool = False) -> None:
