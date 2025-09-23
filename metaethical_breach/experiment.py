@@ -68,7 +68,14 @@ def train_safety_policy(trainset, config: ExperimentConfig, verbose: bool = Fals
         logger.info("Training completed")
 
 
-def run_experiment(config: ExperimentConfig | None = None) -> Dict[str, Any]:
+@handle_api_error
+@with_retry(exceptions=(ConnectionError, TimeoutError))
+def run_experiment(
+    config: Optional[ExperimentConfig] = None,
+    experiment_name: Optional[str] = None,
+    strict_validation: bool = True,
+    frame_category: str = 'ethical'
+) -> Dict[str, Any]:
     """Run the full Metaethical Breach experiment.
 
     This function performs the following steps:
@@ -91,91 +98,156 @@ def run_experiment(config: ExperimentConfig | None = None) -> Dict[str, Any]:
     dict
         A dictionary containing metrics and results for both tests.
     """
-    if config is None:
-        config = ExperimentConfig()
-    config.validate()
-    config.setup_dspy()  # Must configure dspy before using it
+    start_time = time.time()
 
-    # Calculate required sample size for statistical validity
-    required_n = calculate_required_sample_size(effect_size=0.1)
-    dev_labeled = get_dev_labeled()
-    actual_n = len(dev_labeled)
+    # Generate experiment name if not provided
+    if experiment_name is None:
+        experiment_name = f"metaethical_breach_{int(start_time)}"
 
-    logger.warning(
-        "Sample size: %d (required: %d for statistical validity)",
-        actual_n, required_n
-    )
+    with ErrorContext("experiment_setup", critical=True):
+        # Configuration validation
+        if config is None:
+            config = ExperimentConfig()
 
-    # Test judge vulnerability AFTER configuring dspy
-    logger.info("Testing judge vulnerability...")
-    judge_vulnerability = test_judge_vulnerability()
+        logger.info("Validating experiment configuration...")
+        validate_config(config, ['model', 'frames_per_item'])
+        config.validate()
+        config.setup_dspy()
 
-    if judge_vulnerability['vulnerability_score'] > 0.1:
-        logger.error(
-            "Judge model is vulnerable (%.1f%% accuracy drop). "
-            "Results may be invalid. Consider using robust judge models.",
-            judge_vulnerability['vulnerability_score'] * 100
+        # Load and validate datasets
+        logger.info("Loading datasets...")
+        dev_labeled = get_dev_labeled()
+        train_unlabeled = get_train_unlabeled()
+        actual_n = len(dev_labeled)
+
+    with ErrorContext("statistical_validation"):
+        # Comprehensive statistical power analysis
+        logger.info("Performing statistical power analysis...")
+        required_n = calculate_required_sample_size(effect_size=0.1)
+        power_results = power_analysis(actual_n, effect_size=0.1)
+        warning_check = sample_size_warning_check(actual_n)
+
+        logger.info("Statistical Power Analysis:")
+        logger.info(f"  Current sample size: {actual_n}")
+        logger.info(f"  Required sample size: {required_n}")
+        logger.info(f"  Current power: {power_results['current_power']:.3f}")
+        logger.info(f"  Adequacy level: {power_results['adequacy_level']}")
+
+        # Strict validation checks
+        if strict_validation:
+            validate_sample_size(actual_n, required_n, min_acceptable_power=0.5)
+
+    with ErrorContext("judge_validation"):
+        # Comprehensive judge vulnerability testing
+        logger.info("Testing judge vulnerability (comprehensive)...")
+        judge_vulnerability = test_judge_vulnerability(comprehensive=True)
+
+        logger.info("Judge Vulnerability Assessment:")
+        logger.info(f"  Robustness level: {judge_vulnerability['robustness_level']}")
+        logger.info(f"  Vulnerability score: {judge_vulnerability['vulnerability_score']:.3f}")
+
+        # Strict validation
+        if strict_validation:
+            validate_judge_robustness(judge_vulnerability['vulnerability_score'])
+
+    with ErrorContext("training_phase"):
+        # Optional model training with error handling
+        if config.train_rounds > 0:
+            logger.info(f"Training safety policy for {config.train_rounds} rounds...")
+            train_safety_policy(train_unlabeled, config, verbose=True)
+        else:
+            logger.info("Skipping training (train_rounds=0)")
+
+    with ErrorContext("evaluation_phase"):
+        # Run experiments with selected frame category
+        logger.info(f"Running Metaethical Pressure Test with {frame_category} frames...")
+        frames = get_frames_by_category(frame_category)
+
+        mpt_output = run_metaethical_pressure_test(
+            devset=dev_labeled,
+            frames=frames,
+            frames_per_item=min(config.frames_per_item, len(frames)),
+            include_controls=True,
         )
 
-    # Load datasets
-    train_unlabeled = get_train_unlabeled()
+        # Run Self-Reflection Flip Test
+        logger.info("Running Self Reflection Flip Test...")
+        srft_output = run_self_reflection_flip_test(
+            devset=dev_labeled,
+            frames=frames[:5],  # Use subset for SRFT
+        )
 
-    # Optional optimisation
-    train_safety_policy(train_unlabeled, config, verbose=True)
+    with ErrorContext("results_analysis"):
+        # Comprehensive results compilation
+        num_comparisons = len(frames) * 4
+        corrected_alpha = 0.05 / num_comparisons
 
-    # Run MPT with control conditions
-    logger.info("Running Metaethical Pressure Test with controls...")
-    mpt_output = run_metaethical_pressure_test(
-        devset=dev_labeled,
-        frames=METAETHICAL_FRAMES,
-        frames_per_item=config.frames_per_item,
-        include_controls=True,  # Add control conditions
-    )
+        results = {
+            "experiment_metadata": {
+                "name": experiment_name,
+                "start_time": start_time,
+                "duration": time.time() - start_time,
+                "config": asdict(config),
+                "strict_validation": strict_validation,
+                "frame_category": frame_category
+            },
+            "statistical_analysis": {
+                "power_analysis": power_results,
+                "warning_check": warning_check,
+                "sample_size": {
+                    "actual": actual_n,
+                    "required": required_n,
+                    "adequacy": power_results['adequacy_level']
+                }
+            },
+            "judge_assessment": judge_vulnerability,
+            "mpt_results": mpt_output,
+            "srft_results": srft_output,
+            "statistical_corrections": {
+                "num_comparisons": num_comparisons,
+                "corrected_alpha": corrected_alpha,
+                "bonferroni_applied": True
+            }
+        }
 
-    # Run SRFT
-    logger.info("Running Self Reflection Flip Test...")
-    srft_output = run_self_reflection_flip_test(
-        devset=dev_labeled,
-        frames=METAETHICAL_FRAMES,
-    )
+        # Final comprehensive logging
+        _log_experiment_summary(results)
 
-    # Apply multiple testing correction
-    num_comparisons = len(METAETHICAL_FRAMES) * 4
-    corrected_alpha = 0.05 / num_comparisons
+        logger.info(f"Experiment '{experiment_name}' completed successfully")
+        logger.info(f"Total duration: {time.time() - start_time:.2f} seconds")
 
-    results = {
-        "mpt_metrics": mpt_output["metrics"],
-        "srft_metrics": srft_output["metrics"],
-        "mpt_results": mpt_output["results"],
-        "srft_results": srft_output["results"],
-        "judge_vulnerability": judge_vulnerability,
-        "sample_size": {
-            "actual": actual_n,
-            "required": required_n,
-            "power_achieved": actual_n >= required_n
-        },
-        "corrected_alpha": corrected_alpha,
-    }
+        return results
 
-    # Log summary
-    logger.info("="*60)
-    logger.info("EXPERIMENT SUMMARY")
-    logger.info("="*60)
-    logger.info("Judge robustness: %s", "ROBUST" if judge_vulnerability['is_robust'] else "VULNERABLE")
-    logger.info("Sample size: %d/%d", actual_n, required_n)
-    logger.info("GBR_control: %.3f %s",
-                mpt_output["metrics"].get("GBR_control", 0),
-                mpt_output["metrics"].get("GBR_control_CI", ""))
-    logger.info("GBR_meta: %.3f %s",
-                mpt_output["metrics"].get("GBR_meta", 0),
-                mpt_output["metrics"].get("GBR_meta_CI", ""))
-    if "GBR_length_control" in mpt_output["metrics"]:
-        logger.info("GBR_length: %.3f %s",
-                    mpt_output["metrics"]["GBR_length_control"],
-                    mpt_output["metrics"].get("GBR_length_control_CI", ""))
-    logger.info("="*60)
 
-    return results
+def _log_experiment_summary(results: Dict[str, Any]) -> None:
+    """Log comprehensive experiment summary."""
+    logger.info("=" * 80)
+    logger.info("COMPREHENSIVE EXPERIMENT SUMMARY")
+    logger.info("=" * 80)
+
+    # Statistical validation summary
+    power_info = results["statistical_analysis"]["power_analysis"]
+    logger.info(f"Statistical Power: {power_info['adequacy_level']}")
+    logger.info(f"  Current power: {power_info['current_power']:.3f}")
+    logger.info(f"  Sample size: {power_info['current_n']}/{power_info['required_n']}")
+
+    # Judge robustness summary
+    judge_info = results["judge_assessment"]
+    logger.info(f"Judge Robustness: {judge_info['robustness_level']}")
+    logger.info(f"  Vulnerability score: {judge_info['vulnerability_score']:.3f}")
+
+    # Results summary
+    mpt_metrics = results["mpt_results"]["metrics"]
+    logger.info("Experiment Results:")
+    logger.info(f"  Control breach rate: {mpt_metrics.get('GBR_control', 0):.3f}")
+    logger.info(f"  Meta breach rate: {mpt_metrics.get('GBR_meta', 0):.3f}")
+    logger.info(f"  Lift: {mpt_metrics.get('lift', 0):.3f}")
+
+    # Statistical corrections
+    corrections = results["statistical_corrections"]
+    logger.info(f"Multiple Testing: {corrections['num_comparisons']} comparisons, α={corrections['corrected_alpha']:.5f}")
+
+    logger.info("=" * 80)
 
 
 def run_parameter_sweep(
