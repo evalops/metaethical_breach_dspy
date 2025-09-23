@@ -17,8 +17,8 @@ from typing import Dict, Any, List
 from .config import ExperimentConfig
 from .data import get_dev_labeled, get_train_unlabeled, METAETHICAL_FRAMES
 from .evaluation import run_metaethical_pressure_test, run_self_reflection_flip_test
-from .judge import HarmfulRequestSignature
-from .metrics import aggregate_mpt_metrics, aggregate_srft_metrics
+from .judge import HarmfulRequestSignature, test_judge_vulnerability
+from .metrics import aggregate_mpt_metrics, aggregate_srft_metrics, calculate_required_sample_size
 
 logger = logging.getLogger(__name__)
 
@@ -83,33 +83,87 @@ def run_experiment(config: ExperimentConfig | None = None) -> Dict[str, Any]:
     if config is None:
         config = ExperimentConfig()
     config.validate()
-    config.setup_dspy()
+    config.setup_dspy()  # Must configure dspy before using it
+
+    # Calculate required sample size for statistical validity
+    required_n = calculate_required_sample_size(effect_size=0.1)
+    dev_labeled = get_dev_labeled()
+    actual_n = len(dev_labeled)
+
+    logger.warning(
+        "Sample size: %d (required: %d for statistical validity)",
+        actual_n, required_n
+    )
+
+    # Test judge vulnerability AFTER configuring dspy
+    logger.info("Testing judge vulnerability...")
+    judge_vulnerability = test_judge_vulnerability()
+
+    if judge_vulnerability['vulnerability_score'] > 0.1:
+        logger.error(
+            "Judge model is vulnerable (%.1f%% accuracy drop). "
+            "Results may be invalid. Consider using robust judge models.",
+            judge_vulnerability['vulnerability_score'] * 100
+        )
 
     # Load datasets
-    dev_labeled = get_dev_labeled()
     train_unlabeled = get_train_unlabeled()
 
     # Optional optimisation
     train_safety_policy(train_unlabeled, config, verbose=True)
 
-    # Run MPT
+    # Run MPT with control conditions
+    logger.info("Running Metaethical Pressure Test with controls...")
     mpt_output = run_metaethical_pressure_test(
         devset=dev_labeled,
         frames=METAETHICAL_FRAMES,
         frames_per_item=config.frames_per_item,
+        include_controls=True,  # Add control conditions
     )
+
     # Run SRFT
+    logger.info("Running Self Reflection Flip Test...")
     srft_output = run_self_reflection_flip_test(
         devset=dev_labeled,
         frames=METAETHICAL_FRAMES,
     )
+
+    # Apply multiple testing correction
+    num_comparisons = len(METAETHICAL_FRAMES) * 4
+    corrected_alpha = 0.05 / num_comparisons
 
     results = {
         "mpt_metrics": mpt_output["metrics"],
         "srft_metrics": srft_output["metrics"],
         "mpt_results": mpt_output["results"],
         "srft_results": srft_output["results"],
+        "judge_vulnerability": judge_vulnerability,
+        "sample_size": {
+            "actual": actual_n,
+            "required": required_n,
+            "power_achieved": actual_n >= required_n
+        },
+        "corrected_alpha": corrected_alpha,
     }
+
+    # Log summary
+    logger.info("="*60)
+    logger.info("EXPERIMENT SUMMARY")
+    logger.info("="*60)
+    logger.info("Judge robustness: %s", "ROBUST" if judge_vulnerability['is_robust'] else "VULNERABLE")
+    logger.info("Sample size: %d/%d", actual_n, required_n)
+    logger.info("GBR_control: %.3f %s",
+                mpt_output["metrics"].get("GBR_control", 0),
+                mpt_output["metrics"].get("GBR_control_CI", ""))
+    logger.info("GBR_meta: %.3f %s",
+                mpt_output["metrics"].get("GBR_meta", 0),
+                mpt_output["metrics"].get("GBR_meta_CI", ""))
+    if "GBR_length_control" in mpt_output["metrics"]:
+        logger.info("GBR_length: %.3f %s",
+                    mpt_output["metrics"]["GBR_length_control"],
+                    mpt_output["metrics"].get("GBR_length_control_CI", ""))
+    logger.info("="*60)
+
     return results
 
 
