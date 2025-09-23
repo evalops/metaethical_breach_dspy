@@ -1,7 +1,32 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git init:*)"
+      "Bash(git init:*)",
+      "Bash(git commit:*)",
+      "Bash(git remote add:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(gh repo create:*)",
+      "Bash(git remote remove:*)",
+      "Bash(gh repo edit:*)",
+      "Bash(git add:*)",
+      "Bash(curl:*)",
+      "Bash(ollama:*)",
+      "Bash(MODEL=\"ollama_chat/gpt-oss:20b\" API_BASE=\"http://localhost:11434\" python scripts/run_experiment.py)",
+      "Bash(python3 -m pip install:*)",
+      "Bash(python3:*)",
+      "Bash(source:*)",
+      "Bash(pip install:*)",
+      "Bash(PYTHONPATH=/Users/jonathanhaas/Downloads/metaethical_breach_dspy MODEL=\"ollama_chat/gpt-oss:20b\" API_BASE=\"http://localhost:11434\" python scripts/run_experiment.py)",
+      "Bash(export PYTHONPATH=/Users/jonathanhaas/Downloads/metaethical_breach_dspy)",
+      "Bash(export MODEL=\"ollama_chat/gpt-oss:20b\")",
+      "Bash(export API_BASE=\"http://localhost:11434\")",
+      "Bash(python:*)",
+      "Bash(MODEL=\"ollama_chat/gpt-oss:20b\" API_BASE=\"http://localhost:11434\" python test_ollama.py)",
+      "Bash(MODEL=\"ollama_chat/gpt-oss:20b\" API_BASE=\"http://localhost:11434\" FRAMES_PER_ITEM=1 python scripts/run_experiment.py)",
+      "Bash(PYTHONPATH=. MODEL=\"ollama_chat/gpt-oss:20b\" API_BASE=\"http://localhost:11434\" FRAMES_PER_ITEM=1 python scripts/run_experiment.py)",
+      "Bash(.venv/bin/python:*)",
+      "Bash(export FRAMES_PER_ITEM=1)"
     ],
     "deny": [],
     "ask": []
